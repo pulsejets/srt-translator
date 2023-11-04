@@ -2,7 +2,7 @@
 ##############################################################################
 ### NZBGET POST-PROCESSING SCRIPT                                           ###
 
-# SRT translater
+# SRT translator
 #
 # This is a script extrace srt subtitles from mkv file and translate it into
 # disired language using google translate
@@ -10,7 +10,7 @@
 # the translated srt files will be placed in sam folder as the mkv file
 #
 # Info about srt translater:
-# Author: Kenneth Moller (k@gmail.com).
+# Author: Kenneth Moller (kenneth.moller@gmail.com).
 # Web-site: github.com
 # License: GPLv3 (http://www.gnu.org/licenses/gpl.html).
 # srt tranlator  Version: 1.0.
@@ -64,6 +64,8 @@ exit_success=0
 exit_error=1
 exit_skip=0
 
+# Script variables
+
 SECONDS=0
 file=""
 target_language="da"
@@ -71,11 +73,12 @@ source_language="en"
 working_directory="tmp"
 ISO_639_list="ISO_639.csv"
 nzb_script_dir=""
-split=50
-overwrite=false
-scan=false
 scan_type="mkv"
 passon_args=""
+split=50
+
+overwrite=false
+scan=false
 verbose=false
 debug=false
 
@@ -94,31 +97,37 @@ verbose(){
 
 }
 
+ # If script is run via NZBget post processing 
+
 if [ -n "$NZBPP_FINALDIR" ]; then
 
-     
-     nzb_script_dir="$NZBOP_SCRIPTDIR/"
+   
     file="$(find "$NZBPP_FINALDIR" -type f -name "*.mkv")"
+    nzb_script_dir="$NZBOP_SCRIPTDIR/"
     working_directory="$NZBOP_TEMPDIR"
     target_language="$NZBPO_DestinationLang"
     source_language="$NZBPO_SourceLang"
+   
     nzblog_warning="[WARNING]"
     nzblog_error="[ERROR]"
     nzblog_info="[INFO]"
     nzblog_detail="[DETAIL]"
+  
     exit_success=93
     exit_error=94
     exit_skip=95
+    
     echo "$nzblog_info Processing  : $file"
+    
     if [$Verbose ="yes"];then
-    verbose="true"
+        verbose="true"
     else
-    verbose="false"
+        verbose="false"
     fi
 else
     
-   
-    # Define usage function
+   # run from cli
+    
     usage() {
     echo -n "Usage: $0"
     echo -n " -f < file >" 
@@ -139,72 +148,66 @@ else
 
     # Parse command line arguments
     while getopts ":f:s:t:w:z:dovMS" opt; do
-    case "$opt" in
-        f) file="$OPTARG";;
-        s) source_language="$OPTARG"
-        passon_args="$passon_args -s $OPTARG"
-        ;;
-        t) target_language="$OPTARG"¨
-        passon_args="$passon_args -t $OPTARG"
-        ;;
-        w) working_directory="$OPTARG";;
-        z) split="$OPTARG"
-        passon_args="$passon_args -z $OPTARG"
-        ;;
-        d) debug="true"
-        passon_args="$passon_args -d "
-        ;;
-        o) overwrite="true"
-        passon_args="$passon_args -o "
-        ;;
-        v) verbose="true"
-        passon_args="$passon_args -v "
-        ;;
-        M) scan="true"
-        scan_type="mkv"
-        ;;
-        S) scan="true"
-            scan_type="srt"
+        case "$opt" in
+            f) file="$OPTARG";;
+            s) source_language="$OPTARG"
+            passon_args="$passon_args -s $OPTARG"
             ;;
-        \?) echo "Invalid option: -$OPTARG" >&2; usage;;
-        :) echo "Option -$OPTARG requires an argument." >&2; usage;;
-    esac
+            t) target_language="$OPTARG"¨
+            passon_args="$passon_args -t $OPTARG"
+            ;;
+            w) working_directory="$OPTARG";;
+            z) split="$OPTARG"
+            passon_args="$passon_args -z $OPTARG"
+            ;;
+            d) debug="true"
+            passon_args="$passon_args -d "
+            ;;
+            o) overwrite="true"
+            passon_args="$passon_args -o "
+            ;;
+            v) verbose="true"
+            passon_args="$passon_args -v "
+            ;;
+            M) scan="true"
+            scan_type="mkv"
+            ;;
+            S) scan="true"
+                scan_type="srt"
+                ;;
+            \?) echo "Invalid option: -$OPTARG" >&2; usage;;
+            :) echo "Option -$OPTARG requires an argument." >&2; usage;;
+        esac
     done
     
     verbose "***********************************************"
     verbose "            Srt Translater                     "
     verbose "***********************************************"
+
     # Check if mandatory arguments are provided
     if [ -z "$file" ] || [ -z "$source_language" ] || [ -z "$target_language" ] || [ -z "$working_directory" ] || [ -z "$split" ];  then
-    echo
-    echo "Mandatory arguments are missing."
-    echo $file $source_language $target_language $working_directory $split
-    echo $@
-    usage
+        echo
+        echo "Mandatory arguments are missing."
+        echo $file $source_language $target_language $working_directory $split
+        echo $@
+        usage
     fi
-
 
     if [ "$scan" = "true" ]; then
         mapfile -t files < <(find "$file" -type f -name "*.${scan_type}")
         if [ "${#files[@]}" -gt 0 ]; then
-        # Loop through the found files (you can perform any operations you want here)
-        verbose "Found ${#files[@]}  file(s)" 
-            
-        for mkv_file in "${files[@]}"; do
-        verbose "processing $files"
-        verbose "------------------------------------------------------------------------"
-            bash $0 -f "$files"
-            verbose $0 -f "$files" "$passon_args" 
-            
-        done
+            verbose "Found ${#files[@]}  file(s)" 
+                
+            for mkv_file in "${files[@]}"; do
+                verbose "processing $files"
+                verbose "------------------------------------------------------------------------"
+                bash $0 -f "$files"
+                verbose $0 -f "$files" "$passon_args" 
+            done
         else
-        echo "No .mkv files found in $directory"
-        exit $exit_error
+            echo "No .mkv files found in $directory"
+            exit $exit_error
         fi
-
-
-
-
     exit
     fi
 
@@ -226,7 +229,7 @@ source_file="$working_directory/$filename_no_extension.$source_language.srt"
 srt_target_file="$file_directory/$filename_no_extension.$target_language.srt"
 
 if [ "$overwrite" = "true" ]; then
- rm "$srt_target_file"
+    rm "$srt_target_file"
 fi
 
 mkdir -p $working_directory
@@ -243,7 +246,7 @@ debug "Variable: file_directory = $file_directory"
 
 if [ ! -f "$file" ]; then
     echo "$nzblog_error [$file] The file does not exist. Exiting..."
-   exit $exit_error
+    exit $exit_error
 fi 
 
 if [ -f "$srt_target_file" ]; then
@@ -261,8 +264,6 @@ if [ ! -d "$file_directory" ] || [ ! -r "$file_directory" ]; then
     exit $exit_error
 fi
 
-
-  
 # Check if the file extension is "mkv" or "srt"
 if [ "$file_extension" = "mkv" ]; then
     verbose "$nzblog_detail The file has the 'mkv' extension."
@@ -326,8 +327,6 @@ function Translate() {
     local target_language=$2
     local source_language=$3
     local progress=1
-    
-
     local filename=$(basename "$strfile")
     local filename_no_extension="${filename%.*}"
     local dir="$(dirname "${strfile}")"
@@ -390,31 +389,29 @@ function Translate() {
     fi
     
     debug "looking for $source_language subtitles"
-
-    
-    
+ 
     id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not)).id')
   
-   if [ -z "$id" ]; then 
+    if [ -z "$id" ]; then 
         debug "No $source_target_Iso639_2 text found"
         debug "Will try seach for SDH $source_target_Iso639_2 subtitls"
         id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and . "properties": {"codec_id".language == $lang and ((.properties.track_name // "") | test("SDH"))).id') 
-   fi
+    fi
+    
+    codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
+    
+    if [ "$codec_type" = "VobSub" ]; then
+            echo "$nzblog_error $nzblog_warning The codec type is vobsub. not suported yet."
+            exit $exit_skip
+    fi
 
-        codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
-
-        if [ "$codec_type" = "VobSub" ]; then
-  echo "$nzblog_error $nzblog_warning The codec type is vobsub. not suported yet."
-  exit $exit_skip
-fi
-
- debug "Track id = $id"
- debug "codec: Variable =$codec_type"
- 
+    debug "Track id = $id"
+    debug "codec: Variable =$codec_type"
     debug "$source_language subtitles found id:$id"
-
+    debug "mkvextract tracks  $file  $id:$source_file"
+    
     verbose "Extracting subtitles $source_language to file: $source_file "  
-   # verbose "mkvextract tracks  $file  $id:$source_file" 
+    
     mkvextract tracks "$file" $id:"$source_file" 
 fi
 
@@ -429,21 +426,19 @@ while IFS= read -r line; do
         ((consecutive_empty_line_count++))
     fi
 
-
     part_content+="$line"$'\n'
-    #echo $consecutive_empty_line_count
-        # Check if we've reached 200 consecutive empty lines
-        if [ "$consecutive_empty_line_count" -eq $split ]; then
-            #echo "$working_directory/part$part_num.srt"
-            #echo $part_content
-            # Write the part content to a new file
-            echo -n "$part_content" > "$working_directory/part$part_num.srt"
-            debug "$part_content  > $working_directory/part$part_num.srt"
-            # Reset variables for the next part
-            part_content=""
-            ((part_num++))
-            consecutive_empty_line_count=0
-        fi
+    
+        # Check if we've reached x consecutive empty lines
+    if [ "$consecutive_empty_line_count" -eq $split ]; then
+        # Write the part content to a new file
+        echo -n "$part_content" > "$working_directory/part$part_num.srt"
+        debug "$part_content  > $working_directory/part$part_num.srt"
+        # Reset variables for the next part
+        part_content=""
+        ((part_num++))
+        consecutive_empty_line_count=0
+    fi
+
 done < "$source_file"
 
 rm -f "$source_file"
@@ -459,7 +454,7 @@ fi
 verbose "Starts translating $total_lines lines from $source_language to $target_language \n"
 
 count=1
- ((part_num++))
+((part_num++))
 # Use a while loop
 while [ "$count" -ne $part_num ]; do
     debug "Command : Translate $working_directory/part$count.srt  $target_language $source_language" 
