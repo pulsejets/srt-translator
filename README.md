@@ -5,6 +5,11 @@
 
     use as cli tool ,or add it Nzbget as post-processing scripts (supported)
 
+    Srt-translator function :
+
+    - NZBget post processing tanslator script
+    - CLi Translator 
+
     This is version 1.0, so there is probably buggy :)
     
     If you find a bug , please create an Issue 
