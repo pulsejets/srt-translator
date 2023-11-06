@@ -249,6 +249,8 @@ debug "Variable: filename = $filename"
 debug "Variable: filename_no_extension = $filename_no_extension"
 debug "Variable: file_extension = $file_extension"
 debug "Variable: file_directory = $file_directory"
+debug "Variable: source_file = $source_file"
+debug "Variable: srt_target_file = $srt_target_file"
 
 if [ ! -f "$file" ]; then
     echo "$nzblog_error [$file] The file does not exist. Exiting..."
