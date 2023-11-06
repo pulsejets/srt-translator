@@ -178,8 +178,7 @@ else
             S) scan="true"
             scan_type="srt"
             ;;
-            F) scan="true"
-            forced="forced."
+            F) forced="forced."
             ;;
             \?) echo "Invalid option: -$OPTARG" >&2; usage;;
             :) echo "Option -$OPTARG requires an argument." >&2; usage;;
