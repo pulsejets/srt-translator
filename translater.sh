@@ -75,10 +75,12 @@ ISO_639_list="ISO_639.csv"
 nzb_script_dir=""
 scan_type="mkv"
 passon_args=""
+forced=""
 split=50
 
 overwrite=false
 scan=false
+
 verbose=false
 debug=false
 
@@ -140,6 +142,7 @@ else
     echo -n " [-v verbose]"
     echo -n " [-M Process all mkv files in directory]"
     echo -n " [-S Process all SRT files in directory]"
+    echo -n " [-F Force external subtitles (for Plex) will add .forced. in file name]"
     echo 
     echo "example  $0 \"Movies/Green Mile (2000)/Green Mile (2000).mkv\" -s en -t nl"
     
@@ -147,7 +150,7 @@ else
     }
 
     # Parse command line arguments
-    while getopts ":f:s:t:w:z:dovMS" opt; do
+    while getopts ":f:s:t:w:z:dovMSF" opt; do
         case "$opt" in
             f) file="$OPTARG";;
             s) source_language="$OPTARG"
@@ -173,8 +176,11 @@ else
             scan_type="mkv"
             ;;
             S) scan="true"
-                scan_type="srt"
-                ;;
+            scan_type="srt"
+            ;;
+            S) scan="true"
+            forced="forced."
+            ;;
             \?) echo "Invalid option: -$OPTARG" >&2; usage;;
             :) echo "Option -$OPTARG requires an argument." >&2; usage;;
         esac
@@ -226,7 +232,7 @@ file_extension="${file##*.}"
 file_directory="$(dirname "${file}")"
 
 source_file="$working_directory/$filename_no_extension.$source_language.srt"
-srt_target_file="$file_directory/$filename_no_extension.$target_language.srt"
+srt_target_file="$file_directory/$filename_no_extension.$target_language.${forced}srt"
 
 if [ "$overwrite" = "true" ]; then
     rm "$srt_target_file"
