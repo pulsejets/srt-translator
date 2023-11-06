@@ -178,8 +178,7 @@ else
             S) scan="true"
             scan_type="srt"
             ;;
-            F) scan="true"
-            forced="forced."
+            F) forced="forced."
             ;;
             \?) echo "Invalid option: -$OPTARG" >&2; usage;;
             :) echo "Option -$OPTARG requires an argument." >&2; usage;;
@@ -388,6 +387,8 @@ function Translate() {
     source_target_Iso639_2=$(Iso639_2 "$source_language")
     debug $target_target_Iso639_2
     debug $source_target_Iso639_2
+     target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
+    debug " $source_language audio id $target_audio_track_id"
     subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
     if [ -n "$subtiles_exsist" ]; then
         echo "$nzblog_warning $target_language subtiles exsist, no need to translate "
@@ -396,10 +397,12 @@ function Translate() {
         debug "$target_language subtiles not found."
     fi
     
-    debug "looking for $source_language subtitles"
+    debug "looking for $source_target_Iso639_2 subtitles"
  
-    id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not)).id')
-  
+    # to rule out multiple Eng subtitles , search for eng subtitles except from if track_name conatian SDH or Commentary
+   id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2" '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not) and ((.properties.track_name // "") | test("Commentary") | not)).id')
+
+  debug "id : $id"
     if [ -z "$id" ]; then 
         debug "No $source_target_Iso639_2 text found"
         debug "Will try seach for SDH $source_target_Iso639_2 subtitls"
@@ -408,10 +411,10 @@ function Translate() {
     
     codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
     
-    if [ "$codec_type" = "VobSub" ]; then
-            echo "$nzblog_error $nzblog_warning The codec type is vobsub. not suported yet."
+    if [ "$codec_type" != "SubRip/SRT" ]; then
+            echo "$nzblog_error $nzblog_warning The codec ($codec_type )type is not suported yet."
             exit $exit_skip
-    fi
+    fi 
 
     debug "Track id = $id"
     debug "codec: Variable =$codec_type"
