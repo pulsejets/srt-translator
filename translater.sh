@@ -43,6 +43,12 @@
 #
 #TempDir=TempDir${MainDir}/tmp
 
+#Force external subtitles for Plex
+#
+# Force external subtitles (for Plex) will add .forced. in file name
+#
+#ForceExternalSRT=yes
+
 # Print more logging messages (yes, no).
 #
 # For debugging or if you need to report a bug
@@ -121,6 +127,11 @@ if [ -n "$NZBPP_FINALDIR" ]; then
     
     echo "$nzblog_info Processing  : $file"
     
+    if [$ForceExternalSRT ="yes"];then
+        forced="forced."
+    else
+        forced=""
+    fi
     if [$Verbose ="yes"];then
         verbose="true"
     else
@@ -387,22 +398,20 @@ function Translate() {
     source_target_Iso639_2=$(Iso639_2 "$source_language")
     debug $target_target_Iso639_2
     debug $source_target_Iso639_2
-     target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
+    target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
     debug " $source_language audio id $target_audio_track_id"
     subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
     if [ -n "$subtiles_exsist" ]; then
-        echo "$nzblog_warning $target_language subtiles exsist, no need to translate "
+        echo "$nzblog_warning $target_language subtiles exsist in mkv file, no need to translate "
         exit $exit_skip
     else 
         debug "$target_language subtiles not found."
     fi
     
-    debug "looking for $source_target_Iso639_2 subtitles"
+    debug "looking for $source_language subtitles"
  
-    # to rule out multiple Eng subtitles , search for eng subtitles except from if track_name conatian SDH or Commentary
-   id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2" '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not) and ((.properties.track_name // "") | test("Commentary") | not)).id')
-
-  debug "id : $id"
+    id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not)).id')
+  
     if [ -z "$id" ]; then 
         debug "No $source_target_Iso639_2 text found"
         debug "Will try seach for SDH $source_target_Iso639_2 subtitls"
@@ -414,7 +423,7 @@ function Translate() {
     if [ "$codec_type" != "SubRip/SRT" ]; then
             echo "$nzblog_error $nzblog_warning The codec ($codec_type )type is not suported yet."
             exit $exit_skip
-    fi 
+    fi
 
     debug "Track id = $id"
     debug "codec: Variable =$codec_type"
