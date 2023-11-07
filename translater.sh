@@ -235,7 +235,7 @@ part_num=1
 consecutive_empty_line_count=0
 part_content=""
 
-country_list="${nzb_script_dir}${ISO_639_list}" 
+country_list="${ISO_639_list}" 
 filename=$(basename "$file")
 filename_no_extension="${filename%.*}"
 file_extension="${file##*.}"
