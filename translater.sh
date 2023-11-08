@@ -251,15 +251,14 @@ else
     fi
 
     if [ "$scan" = "true" ]; then
-        mapfile -t files < <(find "$file" -type f -name "*.${scan_type}")
-        if [ "${#files[@]}" -gt 0 ]; then
-            verbose "Found ${#files[@]}  file(s)" 
-                
+       mapfile -t files < <(find "$file" -type f -name "*.${scan_type}" -mtime -10)
+
+        if [ "${#files[@]}" -gt 0 ]; then   
+            verbose "Found ${#files[@]} file(s)"
+
             for mkv_file in "${files[@]}"; do
-                verbose "processing $files"
-                verbose "------------------------------------------------------------------------"
-                bash $0 -f "$files"
-                verbose $0 -f "$files" "$passon_args" 
+                verbose "processing $mkv_file"
+               bash $0 -f "$mkv_file"  "$passon_args"
             done
         else
             echo "No .mkv files found in $directory"
@@ -337,28 +336,6 @@ else
     echo "$nzblog_error $nzblog_error $file_extension is an unknown file type"
     exit $exit_error
 fi
-
-
-
-
-
-
-function check_language_code() {
-    result=$(cat "$country_list" |cut -d ";" -f2 |grep $1 |wc -l)
-    if [ $result -eq 0 ]; then
-        echo "$nzblog_error $1 language doesn't exsist , exting"
-        exit $exit_error
-    fi
-}
-
-
-#check_language_code "$target_language"
-#check_language_code "$source_language"
-
-
-
-
-
 
 function drawProgressBar() {
     local progress=$1
@@ -439,52 +416,65 @@ function Translate() {
     source_target_Iso639_2=${iso639[$source_language]}
  
 
-echo  ${iso639[$source_language]}
-debug  "target_language = $target_language"
-debug  "source_language = $source_language"
- if [ "$type" == "mkv" ]; then 
 
-   
-    debug "Variable target_target_Iso639_2 =$target_target_Iso639_2"
-    debug "Variable source_target_Iso639_2 =$source_target_Iso639_2"
-    target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
-    debug " $source_language audio id $target_audio_track_id"
-    subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
-    if [ -n "$subtiles_exsist" ]; then
-        echo "$nzblog_warning $target_language subtiles exsist in mkv file, no need to translate "
-        exit $exit_skip
-    else 
-        debug "$target_language subtiles not found."
-    fi
+debug  "Variable: target_language = $target_language"
+debug  "Variable:source_language = $source_language"
+
+if [ "$type" == "mkv" ]; then 
+
+    if mkvmerge -i "$file" | grep -q 'SubRip/SRT'; then
+        echo "The MKV file contains SubRip/SRT subtitles."
+
     
-    debug "looking for $source_language subtitles"
- 
-    id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not)).id')
-  
-    if [ -z "$id" ]; then 
-        debug "No $source_target_Iso639_2 text found"
-        debug "Will try seach for SDH $source_target_Iso639_2 subtitls"
-        id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and . "properties": {"codec_id".language == $lang and ((.properties.track_name // "") | test("SDH"))).id') 
-    fi
+        debug "Variable target_target_Iso639_2 =$target_target_Iso639_2"
+        debug "Variable source_target_Iso639_2 =$source_target_Iso639_2"
+    # debug "Command: mkvmerge -J '$file' | jq -r  --arg lang '$source_target_Iso639_2'  '.tracks[] | select(.type == 'audio') | select(.properties.language == $lang).id')"
+        #target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
+        
+    # debug " $source_language audio id $target_audio_track_id"
+        subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
+        if [ -n "$subtiles_exsist" ]; then
+            echo "$nzblog_warning $target_language subtiles exsist in mkv file, no need to translate "
+            #exit $exit_skip
+        else 
+            debug "Status: $target_language subtiles not found."
+        fi
+        
+        debug "Status: looking for $source_language subtitles"
+        debug "Command: mkvmerge -J \"$file\" | jq -r --arg lang \"$source_target_Iso639_2\"  '.tracks[] | select(.type == \"subtitles\" and .properties.language == \$lang and ((.properties.track_name // \"\") | test(\"SDH\") | not)).id'"
+    id=$(mkvmerge -J  "$file" | jq -r --arg lang "$source_target_Iso639_2" '.tracks[] | select(.type == "subtitles" and .properties.language == $lang  and .properties.codec_id == "S_TEXT/UTF8" and ((.properties.track_name // "") | test("SDH") | not)).id')
+    # id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2" '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") | not) and ((.properties.track_name // "") | test("Commentary") | not)).id')
     
-    codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
-    
-    if [ "$codec_type" != "SubRip/SRT" ]; then
-            echo "$nzblog_error $nzblog_warning The codec ($codec_type )type is not suported yet."
+        if [ -z "$id" ]; then 
+            debug "Status: No $source_target_Iso639_2 text found"
+            debug "Status: Will try seach for SDH $source_target_Iso639_2 subtitls"
+            id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and . "properties": {"codec_id".language == $lang and ((.properties.track_name // "") | test("SDH"))).id') 
+        fi
+        
+        codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
+        
+        if [ "$codec_type" != "SubRip/SRT" ]; then
+            echo "$file"
+            echo  "$nzblog_warning The codec ($codec_type )type is not suported yet."
             exit $exit_skip
-    fi
+        fi
 
-    debug "Track id = $id"
-    debug "codec: Variable =$codec_type"
-    debug "$source_language subtitles found id:$id"
-    debug "mkvextract tracks  $file  $id:$source_file"
-    
-    verbose "Extracting subtitles $source_language to file: $source_file "  
-    
-    mkvextract tracks "$file" $id:"$source_file" 
+        debug "Variable: Track id = $id"
+        debug "Variable: codec: Variable =$codec_type"
+        debug "Status: $source_language subtitles found id:$id"
+        debug "Command: mkvextract tracks  $file  $id:$source_file"
+        
+        verbose "Extracting subtitles $source_language to file: $source_file "  
+        
+        mkvextract tracks "$file" $id:"$source_file"
+        
+        else
+    echo "The MKV file does not contain SubRip/SRT subtitles."
+    exit $exit_error
+    fi
 fi
 
-verbose "Splitting srt file per $split line to speed up translating"
+verbose "Status: Splitting srt file per $split line to speed up translating"
 
 ############################# Start splitting SRT file ##################################
 
@@ -501,7 +491,7 @@ while IFS= read -r line; do
     if [ "$consecutive_empty_line_count" -eq $split ]; then
         # Write the part content to a new file
         echo -n "$part_content" > "$working_directory/part$part_num.srt"
-        debug "$part_content  > $working_directory/part$part_num.srt"
+        #debug "$part_content  > $working_directory/part$part_num.srt"
         # Reset variables for the next part
         part_content=""
         ((part_num++))
@@ -511,6 +501,7 @@ while IFS= read -r line; do
 done < "$source_file"
 
 rm -f "$source_file"
+
 # Write any remaining content to a part file
 if [ -n "$part_content" ]; then
     echo -n "$part_content" > "$working_directory/part$part_num.srt"
@@ -541,16 +532,20 @@ verbose "\n$nzblog_info transling done"
 verbose "combining parts file to $srt_target_file"
 
 count=1
-
+#cat "$working_directory/part$count.$target_language.srt" >> "$srt_target_file"
 while [ "$count" -ne $part_num ]; do
     cat "$working_directory/part$count.$target_language.srt" >> "$srt_target_file"
-    rm  -f "$working_directory/part$count.$target_language.srt"
+   # rm  -f "$working_directory/part$count.$target_language.srt"
     rm  -f "$working_directory/part$count.srt"
     ((count++))
 done
 
- mkvmerge -o "${file}.tmp"  "$file" --language 0:"$target_target_Iso639_2" "$srt_target_file"
- if [ $? -eq 0 ]; then
+echo "adding $srt_target_file subtitle to $file"
+debug "Command: mkvmerge -o \"${file}.tmp\"  \"$file\" --language 0:\"$target_target_Iso639_2\" \"$srt_target_file\""
+
+mkvmerge -o "${file}.tmp"  "$file" --language 0:"$target_target_Iso639_2" "$srt_target_file"
+
+if [ $? -eq 0 ]; then
     echo "mkvmerge succeeded"
     echo "deleting $file"
     rm -f "$file"
@@ -558,6 +553,7 @@ done
     mv "${file}.tmp" "${file}"
 else
     echo "mkvmerge failed with exit code $?"
+    exit $exit_error
 fi
 
 echo "$nzblog_info DONE"
