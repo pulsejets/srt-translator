@@ -71,7 +71,7 @@ exit_error=1
 exit_skip=0
 
 # Script variables
-
+declare -A iso639
 
 iso639["aa"]="aar";iso639["ab"]="abk";iso639["af"]="afr";iso639["ak"]="aka";iso639["sq"]="alb";
 iso639["am"]="amh";iso639["ar"]="ara";iso639["an"]="arg";iso639["hy"]="arm";iso639["as"]="asm";
@@ -110,6 +110,8 @@ iso639["ts"]="tso";iso639["tk"]="tuk";iso639["tr"]="tur";iso639["tw"]="twi";iso6
 iso639["uk"]="ukr";iso639["ur"]="urd";iso639["uz"]="uzb";iso639["ve"]="ven";iso639["vi"]="vie";
 iso639["vo"]="vol";iso639["cy"]="wel";iso639["wa"]="wln";iso639["wo"]="wol";iso639["xh"]="xho";
 iso639["yi"]="yid";iso639["yo"]="yor";iso639["za"]="zha";
+
+
 
 SECONDS=0
 file=""
@@ -433,15 +435,18 @@ function Translate() {
 }
 
 ############################# Extract subtitles from MKV file only ##################################
- target_target_Iso639_2="${iso639[$target_language]}"
-    source_target_Iso639_2="${iso639[$source_language]}"
+ target_target_Iso639_2=${iso639[$target_language]}
+    source_target_Iso639_2=${iso639[$source_language]}
+ 
 
-
+echo  ${iso639[$source_language]}
+debug  "target_language = $target_language"
+debug  "source_language = $source_language"
  if [ "$type" == "mkv" ]; then 
 
    
-    debug $target_target_Iso639_2
-    debug $source_target_Iso639_2
+    debug "Variable target_target_Iso639_2 =$target_target_Iso639_2"
+    debug "Variable source_target_Iso639_2 =$source_target_Iso639_2"
     target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
     debug " $source_language audio id $target_audio_track_id"
     subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
