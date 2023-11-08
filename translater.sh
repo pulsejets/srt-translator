@@ -167,7 +167,7 @@ else
             s) source_language="$OPTARG"
             passon_args="$passon_args -s $OPTARG"
             ;;
-            t) target_language="$OPTARG"¨
+            t) target_language="$OPTARG"
             passon_args="$passon_args -t $OPTARG"
             ;;
             w) working_directory="$OPTARG";;
