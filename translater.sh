@@ -249,11 +249,12 @@ if [ "$overwrite" = "true" ]; then
 fi
 
 mkdir -p $working_directory
-rm -f $working_directory/*.srt
+   rm -f $working_directory/*.srt
 
 debug "$0 all arguments $@"
 debug "Variable: file directory = $file_directory"
 debug "Variable: file= $file"
+debug "Variable: split= $split"
 
 debug "Variable: filename = $filename"
 debug "Variable: filename_no_extension = $filename_no_extension"
@@ -341,25 +342,30 @@ function drawProgressBar() {
 
 
 function Translate() {
+   
     local strfile=$1
     local target_language=$2
     local source_language=$3
     local progress=1
+    local pre_subtitle_id="0"
+    local subtitle_id="1"
     local filename=$(basename "$strfile")
     local filename_no_extension="${filename%.*}"
     local dir="$(dirname "${strfile}")"
     local temp_srt_file="$dir/$filename_no_extension.$target_language.srt"
 
     local total_lines=$(awk '!/^[0-9]+$/ && !/^[0-9]+:[0-9]+:[0-9]+,[0-9]+ --> [0-9]+:[0-9]+:[0-9]+,[0-9]+$/' "${strfile}" |grep "\S" |wc -l)
-    
+     dos2unix "$strfile"
     debug "Variable: temp_srt_file= $temp_srt_file"
     
     while IFS= read -r line; do
-        if [[ $line =~ ^[0-9][^:]*$ ]]; then
+        if [[ $line =~ ^[0-9][^:]*$  ]]; then
             subtitle_id="$line" 
-            continue
+            #debug "subtitle_id =$subtitle_id"
+    	    continue
         elif [[ $line =~ ^[0-9][0-9]:[0-9][0-9] ]]; then
             timestamp="$line"
+	        # debug "timestamp=$timestamp"
             continue
         elif [[ $line != "" ]]; then
         
@@ -390,12 +396,12 @@ function Translate() {
 }
 
 ############################# Extract subtitles from MKV file only ##################################
-
+ target_target_Iso639_2=$(Iso639_2 "$target_language")
+    source_target_Iso639_2=$(Iso639_2 "$source_language")
 
  if [ "$type" == "mkv" ]; then 
 
-    target_target_Iso639_2=$(Iso639_2 "$target_language")
-    source_target_Iso639_2=$(Iso639_2 "$source_language")
+   
     debug $target_target_Iso639_2
     debug $source_target_Iso639_2
     target_audio_track_id=$(mkvmerge -J "$file" | jq -r  --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "audio") | select(.properties.language == $lang).id')
@@ -472,6 +478,7 @@ fi
 ############################# start  translating ##################################
 
 verbose "Starts translating $total_lines lines from $source_language to $target_language \n"
+debug "Variable part_num = $part_num"
 
 count=1
 ((part_num++))
@@ -498,6 +505,17 @@ while [ "$count" -ne $part_num ]; do
     rm  -f "$working_directory/part$count.srt"
     ((count++))
 done
+
+ mkvmerge -o "${file}.tmp"  "$file" --language 0:"$target_target_Iso639_2" "$srt_target_file"
+ if [ $? -eq 0 ]; then
+    echo "mkvmerge succeeded"
+    echo "deleting $file"
+    rm -f "$file"
+    echo "renaming ${file}.tmp to  ${file}"
+    mv "${file}.tmp" "${file}"
+else
+    echo "mkvmerge failed with exit code $?"
+fi
 
 echo "$nzblog_info DONE"
 ELAPSED="Elapsed: $(($SECONDS / 3600))hrs $((($SECONDS / 60) % 60))min $(($SECONDS % 60))sec"
