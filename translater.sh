@@ -72,12 +72,51 @@ exit_skip=0
 
 # Script variables
 
+
+iso639["aa"]="aar";iso639["ab"]="abk";iso639["af"]="afr";iso639["ak"]="aka";iso639["sq"]="alb";
+iso639["am"]="amh";iso639["ar"]="ara";iso639["an"]="arg";iso639["hy"]="arm";iso639["as"]="asm";
+iso639["av"]="ava";iso639["ae"]="ave";iso639["ay"]="aym";iso639["az"]="aze";iso639["ba"]="bak";
+iso639["bm"]="bam";iso639["be"]="bel";iso639["eu"]="baq";iso639["bn"]="ben";iso639["bh"]="bih";
+iso639["bi"]="bis";iso639["bs"]="bos";iso639["br"]="bre";iso639["bg"]="bul";iso639["my"]="bur";
+iso639["ca"]="cat";iso639["ch"]="cha";iso639["ce"]="che";iso639["zh"]="chi";iso639["cu"]="chu";
+iso639["cv"]="chv";iso639["kw"]="cor";iso639["co"]="cos";iso639["cr"]="cre";iso639["cs"]="cze";
+iso639["da"]="dan";iso639["dv"]="div";iso639["nl"]="dut";iso639["dz"]="dzo";iso639["en"]="eng";
+iso639["eo"]="epo";iso639["et"]="est";iso639["ee"]="ewe";iso639["fo"]="fao";iso639["fj"]="fij";
+iso639["fi"]="fin";iso639["fr"]="fre";iso639["fy"]="fry";iso639["ff"]="ful";iso639["ka"]="geo";
+iso639["de"]="ger";iso639["gd"]="gla";iso639["ga"]="gle";iso639["gl"]="glg";iso639["gv"]="glv";
+iso639["el"]="gre";iso639["gn"]="grn";iso639["gu"]="guj";iso639["ht"]="hat";iso639["ha"]="hau";
+iso639["he"]="heb";iso639["hz"]="her";iso639["hi"]="hin";iso639["ho"]="hmo";iso639["hr"]="hrv";
+iso639["hu"]="hun";iso639["ig"]="ibo";iso639["is"]="ice";iso639["io"]="ido";iso639["ii"]="iii";
+iso639["iu"]="iku";iso639["ie"]="ile";iso639["ia"]="ina";iso639["id"]="ind";iso639["ik"]="ipk";
+iso639["it"]="ita";iso639["jv"]="jav";iso639["ja"]="jpn";iso639["kl"]="kal";iso639["kn"]="kan";
+iso639["ks"]="kas";iso639["kr"]="kau";iso639["kk"]="kaz";iso639["km"]="khm";iso639["ki"]="kik";
+iso639["rw"]="kin";iso639["ky"]="kir";iso639["kv"]="kom";iso639["kg"]="kon";iso639["ko"]="kor";
+iso639["kj"]="kua";iso639["ku"]="kur";iso639["lo"]="lao";iso639["la"]="lat";iso639["lv"]="lav";
+iso639["li"]="lim";iso639["ln"]="lin";iso639["lt"]="lit";iso639["lb"]="ltz";iso639["lu"]="lub";
+iso639["lg"]="lug";iso639["mk"]="mac";iso639["mh"]="mah";iso639["ml"]="mal";iso639["mi"]="mao";
+iso639["mr"]="mar";iso639["ms"]="may";iso639["mg"]="mlg";iso639["mt"]="mlt";iso639["mn"]="mon";
+iso639["na"]="nau";iso639["nv"]="nav";iso639["nr"]="nbl";iso639["nd"]="nde";iso639["ng"]="ndo";
+iso639["ne"]="nep";iso639["nn"]="nno";iso639["nb"]="nob";iso639["no"]="nor";iso639["ny"]="nya";
+iso639["oc"]="oci";iso639["oj"]="oji";iso639["or"]="ori";iso639["om"]="orm";iso639["os"]="oss";
+iso639["pa"]="pan";iso639["fa"]="per";iso639["pi"]="pli";iso639["pl"]="pol";iso639["pt"]="por";
+iso639["ps"]="pus";iso639["qu"]="que";iso639["rm"]="roh";iso639["ro"]="rum";iso639["rn"]="run";
+iso639["ru"]="rus";iso639["sg"]="sag";iso639["sa"]="san";iso639["si"]="sin";iso639["sk"]="slo";
+iso639["sl"]="slv";iso639["se"]="sme";iso639["sm"]="smo";iso639["sn"]="sna";iso639["sd"]="snd";
+iso639["so"]="som";iso639["st"]="sot";iso639["es"]="spa";iso639["sc"]="srd";iso639["sr"]="srp";
+iso639["ss"]="ssw";iso639["su"]="sun";iso639["sw"]="swa";iso639["sv"]="swe";iso639["ty"]="tah";
+iso639["ta"]="tam";iso639["tt"]="tat";iso639["te"]="tel";iso639["tg"]="tgk";iso639["tl"]="tgl";
+iso639["th"]="tha";iso639["bo"]="tib";iso639["ti"]="tir";iso639["to"]="ton";iso639["tn"]="tsn";
+iso639["ts"]="tso";iso639["tk"]="tuk";iso639["tr"]="tur";iso639["tw"]="twi";iso639["ug"]="uig";
+iso639["uk"]="ukr";iso639["ur"]="urd";iso639["uz"]="uzb";iso639["ve"]="ven";iso639["vi"]="vie";
+iso639["vo"]="vol";iso639["cy"]="wel";iso639["wa"]="wln";iso639["wo"]="wol";iso639["xh"]="xho";
+iso639["yi"]="yid";iso639["yo"]="yor";iso639["za"]="zha";
+
 SECONDS=0
 file=""
 target_language="da"
 source_language="en"
 working_directory="tmp"
-ISO_639_list="ISO_639.csv"
+
 nzb_script_dir=""
 scan_type="mkv"
 passon_args=""
@@ -235,7 +274,7 @@ part_num=1
 consecutive_empty_line_count=0
 part_content=""
 
-country_list="${ISO_639_list}" 
+
 filename=$(basename "$file")
 filename_no_extension="${filename%.*}"
 file_extension="${file##*.}"
@@ -314,9 +353,7 @@ function check_language_code() {
 #check_language_code "$target_language"
 #check_language_code "$source_language"
 
-function Iso639_full_contry (){ awk -v search="$1" -F ';' '$2 == search {print $3}' $country_list ;}
 
-function Iso639_2 (){ awk -v search="$1" -F ';' '$2 == search {print $1}' $country_list ;}
 
 
 
@@ -396,8 +433,9 @@ function Translate() {
 }
 
 ############################# Extract subtitles from MKV file only ##################################
- target_target_Iso639_2=$(Iso639_2 "$target_language")
-    source_target_Iso639_2=$(Iso639_2 "$source_language")
+ target_target_Iso639_2="${iso639[$target_language]}"
+    source_target_Iso639_2="${iso639[$source_language]}"
+
 
  if [ "$type" == "mkv" ]; then 
 
