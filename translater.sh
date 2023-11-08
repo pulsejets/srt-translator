@@ -168,12 +168,12 @@ if [ -n "$NZBPP_FINALDIR" ]; then
     
     echo "$nzblog_info Processing  : $file"
     
-    if [$ForceExternalSRT ="yes"];then
+    if [ $ForceExternalSRT ="yes" ];then
         forced="forced."
     else
         forced=""
     fi
-    if [$Verbose ="yes"];then
+    if [ $Verbose ="yes" ];then
         verbose="true"
     else
         verbose="false"
@@ -237,6 +237,14 @@ else
         esac
     done
     
+if ! command -v mkvmerge &> /dev/null || ! command -v mkvextract &> /dev/null || ! command -v jq &> /dev/null || ! command -v dos2unix &> /dev/null; then
+    echo "One or more of the required programs (mkvmerge, mkvextract, jq, dos2unix) is not installed. Please install them."
+    echo "$nzblog_error  One or more of the required programs (mkvmerge, mkvextract, jq, dos2unix) is not installed. Please install them."
+    exit $exit_error
+fi
+
+
+
     verbose "***********************************************"
     verbose "            Srt Translater                     "
     verbose "***********************************************"
