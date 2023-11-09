@@ -124,7 +124,7 @@ scan_type="mkv"
 passon_args=""
 forced=""
 split=50
-
+uniq_filename=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 10)
 overwrite=false
 scan=false
 
@@ -259,7 +259,7 @@ fi
     fi
 
     if [ "$scan" = "true" ]; then
-       mapfile -t files < <(find "$file" -type f -name "*.${scan_type}" -mtime -10)
+       mapfile -t files < <(find "$file" -type f -name "*.${scan_type}" -mtime -20)
 
         if [ "${#files[@]}" -gt 0 ]; then   
             verbose "Found ${#files[@]} file(s)"
@@ -380,8 +380,9 @@ function Translate() {
 
     local total_lines=$(awk '!/^[0-9]+$/ && !/^[0-9]+:[0-9]+:[0-9]+,[0-9]+ --> [0-9]+:[0-9]+:[0-9]+,[0-9]+$/' "${strfile}" |grep "\S" |wc -l)
      dos2unix "$strfile"
+     debug "Variable: strfile= $strfile"
     debug "Variable: temp_srt_file= $temp_srt_file"
-    
+   
     while IFS= read -r line; do
         if [[ $line =~ ^[0-9][^:]*$  ]]; then
             subtitle_id="$line" 
@@ -430,9 +431,7 @@ debug  "Variable:source_language = $source_language"
 
 if [ "$type" == "mkv" ]; then 
 
-    if mkvmerge -i "$file" | grep -q 'SubRip/SRT'; then
-        echo "The MKV file contains SubRip/SRT subtitles."
-
+  
     
         debug "Variable target_target_Iso639_2 =$target_target_Iso639_2"
         debug "Variable source_target_Iso639_2 =$source_target_Iso639_2"
@@ -443,11 +442,14 @@ if [ "$type" == "mkv" ]; then
         subtiles_exsist=$(mkvmerge -J "$file" | jq -r  --arg var "${target_target_Iso639_2}" '.tracks[] | select(.type == "subtitles" and .properties.language == $var)'.id)
         if [ -n "$subtiles_exsist" ]; then
             echo "$nzblog_warning $target_language subtiles exsist in mkv file, no need to translate "
-            #exit $exit_skip
+            exit $exit_skip
         else 
             debug "Status: $target_language subtiles not found."
         fi
-        
+    
+    if mkvmerge -i "$file" | grep -q 'SubRip/SRT'; then
+        echo "The MKV file contains SubRip/SRT subtitles."
+   
         debug "Status: looking for $source_language subtitles"
         debug "Command: mkvmerge -J \"$file\" | jq -r --arg lang \"$source_target_Iso639_2\"  '.tracks[] | select(.type == \"subtitles\" and .properties.language == \$lang and ((.properties.track_name // \"\") | test(\"SDH\") | not)).id'"
     id=$(mkvmerge -J  "$file" | jq -r --arg lang "$source_target_Iso639_2" '.tracks[] | select(.type == "subtitles" and .properties.language == $lang  and .properties.codec_id == "S_TEXT/UTF8" and ((.properties.track_name // "") | test("SDH") | not)).id')
@@ -456,7 +458,9 @@ if [ "$type" == "mkv" ]; then
         if [ -z "$id" ]; then 
             debug "Status: No $source_target_Iso639_2 text found"
             debug "Status: Will try seach for SDH $source_target_Iso639_2 subtitls"
-            id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and . "properties": {"codec_id".language == $lang and ((.properties.track_name // "") | test("SDH"))).id') 
+           # debug "mkvmerge -J \"$file\" | jq -r --arg lang \"$source_target_Iso639_2\"  '.tracks[] | select(.type == \"subtitles\" and . \"properties\": {\"codec_id\".language == \$lang and ((.properties.track_name // \"\") | test(\"SDH\"))).id'"
+             id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and .properties.language == $lang and ((.properties.track_name // "") | test("SDH") )).id')
+           ## id=$(mkvmerge -J "$file" | jq -r --arg lang "$source_target_Iso639_2"  '.tracks[] | select(.type == "subtitles" and . "properties": {"codec_id".language == $lang and ((.properties.track_name // "") | test("SDH"))).id') 
         fi
         
         codec_type=$(mkvmerge -J "$file" | jq -r --argjson id "$id" '.tracks[] | select(.id == $id) | .codec')
@@ -498,8 +502,8 @@ while IFS= read -r line; do
         # Check if we've reached x consecutive empty lines
     if [ "$consecutive_empty_line_count" -eq $split ]; then
         # Write the part content to a new file
-        echo -n "$part_content" > "$working_directory/part$part_num.srt"
-        #debug "$part_content  > $working_directory/part$part_num.srt"
+        echo -n "$part_content" > "$working_directory/${uniq_filename}_$part_num.srt"
+        #debug "$part_content  >"$working_directory/${uniq_filename}_$part_num.srt"
         # Reset variables for the next part
         part_content=""
         ((part_num++))
@@ -512,7 +516,7 @@ rm -f "$source_file"
 
 # Write any remaining content to a part file
 if [ -n "$part_content" ]; then
-    echo -n "$part_content" > "$working_directory/part$part_num.srt"
+    echo -n "$part_content" > "$working_directory/${uniq_filename}_$part_num.srt"
 fi
 
 ############################# End splitting SRT file ##################################
@@ -526,13 +530,14 @@ count=1
 ((part_num++))
 # Use a while loop
 while [ "$count" -ne $part_num ]; do
-    debug "Command : Translate $working_directory/part$count.srt  $target_language $source_language" 
-    Translate "$working_directory/part$count.srt" "$target_language" "$source_language"  &
+    debug "Command : Translate $working_directory/${uniq_filename}_$count.srt  $target_language $source_language" 
+    Translate "$working_directory/${uniq_filename}_$count.srt" "$target_language" "$source_language"  &
     ((count++))
 done
 
 wait
-rm -f "$working_directory/$filename_no_extension.$target_language.srt"
+#ls -al  "$working_directory"
+rm -f "$working_directory/$uniq_filename.$target_language.srt"
 verbose "\n$nzblog_info transling done"
 
 ############################# end  translating ##################################
@@ -542,9 +547,10 @@ verbose "combining parts file to $srt_target_file"
 count=1
 #cat "$working_directory/part$count.$target_language.srt" >> "$srt_target_file"
 while [ "$count" -ne $part_num ]; do
-    cat "$working_directory/part$count.$target_language.srt" >> "$srt_target_file"
-   # rm  -f "$working_directory/part$count.$target_language.srt"
-    rm  -f "$working_directory/part$count.srt"
+    cat "$working_directory/${uniq_filename}_$count.$target_language.srt" >> "$srt_target_file"
+    rm  -f "$working_directory/${uniq_filename}_$count.srt"
+    rm  -f "$working_directory/${uniq_filename}_$count.$target_language.srt"
+    debug "rm $working_directory/${uniq_filename}_$count.$target_language.srt"
     ((count++))
 done
 
