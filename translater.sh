@@ -124,7 +124,8 @@ scan_type="mkv"
 passon_args=""
 forced=""
 split=50
-uniq_filename=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 10)
+uniq_filename=$(date +"%Y%m%d%H%M%S")$((RANDOM % 9000 + 1000))
+random_filename="${timestamp}_${random_number}.txt"
 overwrite=false
 scan=false
 
@@ -373,16 +374,36 @@ function Translate() {
     local progress=1
     local pre_subtitle_id="0"
     local subtitle_id="1"
+    local total_milliseconds
+    local new_timestamp
     local filename=$(basename "$strfile")
     local filename_no_extension="${filename%.*}"
     local dir="$(dirname "${strfile}")"
+    local offeset
     local temp_srt_file="$dir/$filename_no_extension.$target_language.srt"
+    dos2unix "$strfile" &> /dev/null
+    local first_line
+    local first_timestamp
+    first_line=$(head -n 1 "$strfile")
 
     local total_lines=$(awk '!/^[0-9]+$/ && !/^[0-9]+:[0-9]+:[0-9]+,[0-9]+ --> [0-9]+:[0-9]+:[0-9]+,[0-9]+$/' "${strfile}" |grep "\S" |wc -l)
-     dos2unix "$strfile"
-     debug "Variable: strfile= $strfile"
-    debug "Variable: temp_srt_file= $temp_srt_file"
-   
+    # Check if the first line is exactly equal to "1"
+    if [ "$first_line" = "1" ]; then
+        debug "The first line is equal to '1'."
+
+        first_timestamp=$(grep -Eo "^[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{3}" "$strfile"  | head -n 1)
+        IFS=:, read -r hours minutes seconds milliseconds <<< "$first_timestamp"
+        total_milliseconds=$((hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds - 100))
+        new_timestamp=$(printf "%02d:%02d:%02d,%03d" $((total_milliseconds / 3600000)) $(((total_milliseconds / 60000) % 60)) $(((total_milliseconds / 1000) % 60)) $((total_milliseconds % 1000)))
+        debug "Variable: strfile= $strfile"
+        debug "Variable: temp_srt_file= $temp_srt_file"
+        echo "1" >> "$temp_srt_file"
+        echo "00:00:0,000 --> $new_timestamp"   >> "$temp_srt_file"
+        echo "Autotranslated by srt-translator" >> "$temp_srt_file"
+        echo "https://github.com/pulsejets/srt-translator"  >> "$temp_srt_file"
+        echo "" >> "$temp_srt_file"
+     fi
+     echo
     while IFS= read -r line; do
         if [[ $line =~ ^[0-9][^:]*$  ]]; then
             subtitle_id="$line" 
@@ -405,8 +426,11 @@ function Translate() {
                 
                 if [ "$pre_subtitle_id" = "$subtitle_id" ];then 
                     echo "$translated_line" >> "$temp_srt_file"
-                else                   
-                    echo "$subtitle_id" >> "$temp_srt_file"
+                else     
+                debug "Variabel subtitleid:  $subtitle_id"
+                    offeset=$subtitle_id
+                    ((offeset++))             
+                    echo "$offeset" >> "$temp_srt_file"
                     echo "$timestamp" >> "$temp_srt_file"
                     echo "$translated_line" >> "$temp_srt_file"
                     pre_subtitle_id=$subtitle_id
@@ -554,20 +578,23 @@ while [ "$count" -ne $part_num ]; do
     ((count++))
 done
 
-echo "adding $srt_target_file subtitle to $file"
-debug "Command: mkvmerge -o \"${file}.tmp\"  \"$file\" --language 0:\"$target_target_Iso639_2\" \"$srt_target_file\""
+if [ "$type" == "mkv" ]; then 
 
-mkvmerge -o "${file}.tmp"  "$file" --language 0:"$target_target_Iso639_2" "$srt_target_file"
+    echo "adding $srt_target_file subtitle to $file"
+    debug "Command: mkvmerge -o \"${file}.tmp\"  \"$file\" --language 0:\"$target_target_Iso639_2\" \"$srt_target_file\""
 
-if [ $? -eq 0 ]; then
-    echo "mkvmerge succeeded"
-    echo "deleting $file"
-    rm -f "$file"
-    echo "renaming ${file}.tmp to  ${file}"
-    mv "${file}.tmp" "${file}"
-else
-    echo "mkvmerge failed with exit code $?"
-    exit $exit_error
+    mkvmerge -o "${file}.tmp"  "$file" --language 0:"$target_target_Iso639_2" "$srt_target_file"
+
+    if [ $? -eq 0 ]; then
+        echo "mkvmerge succeeded"
+        echo "deleting $file"
+        rm -f "$file"
+        echo "renaming ${file}.tmp to  ${file}"
+        mv "${file}.tmp" "${file}"
+    else
+        echo "mkvmerge failed with exit code $?"
+        exit $exit_error
+    fi
 fi
 
 echo "$nzblog_info DONE"
